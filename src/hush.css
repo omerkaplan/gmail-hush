@@ -1,0 +1,339 @@
+/* Hush for Gmail: a quiet, Superhuman-style dark theme layered on top of Simplify Gmail.
+ * Simplify drives most of its look through CSS variables on html.simplify, so we re-skin
+ * by overriding those, then refine the message list directly. */
+
+:root.hush {
+  --hush-bg: #121316;
+  --hush-surface: #17181b;
+  --hush-raised: #1f2024;
+  --hush-hover: #1b1c20;
+  --hush-line: rgba(255, 255, 255, 0.055);
+  --hush-text: #ededf0;
+  --hush-text-2: #a3a6ad;
+  --hush-text-3: #6c6f77;
+  --hush-accent: #8f80ff;
+  --hush-accent-soft: rgba(143, 128, 255, 0.16);
+  --hush-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", system-ui, sans-serif;
+}
+
+/* ---------- Simplify variable overrides ---------- */
+
+html.hush.simplify {
+  --sg_theme_bgColor: var(--hush-bg) !important;
+  --sg_interface_font_face: var(--hush-font) !important;
+  --color-themeAccent: var(--hush-bg) !important;
+  --color-themeGray: var(--hush-bg) !important;
+  --color-navBg: var(--hush-bg) !important;
+  --color-navPeek: var(--hush-surface) !important;
+  --color-navHover: var(--hush-hover) !important;
+  --color-searchBg: var(--hush-raised) !important;
+  --color-listBg: var(--hush-bg) !important;
+  --color-unreadItemBg: var(--hush-bg) !important;
+  --color-readItemBg: var(--hush-bg) !important;
+  --color-groupBg: var(--hush-bg) !important;
+  --color-bundle-bg: var(--hush-bg) !important;
+  --color-bundleHeaderBg: var(--hush-bg) !important;
+  --color-itemFont: var(--hush-text) !important;
+  --color-readItemFont: var(--hush-text-2) !important;
+  --color-groupFont: var(--hush-text-3) !important;
+  --color-itemBorder: transparent !important;
+  --color-border: var(--hush-line) !important;
+  --color-paneBorder: transparent !important;
+  --border-pane: none !important;
+  --border-item: none !important;
+  --color-focused: var(--hush-hover) !important;
+  --color-focused-not-open: var(--hush-hover) !important;
+  --color-selected-focused: var(--hush-accent-soft) !important;
+  --color-active: var(--hush-accent-soft) !important;
+  --color-msgBg: var(--hush-bg) !important;
+  --color-chatBg: var(--hush-surface) !important;
+  --color-composeFab: var(--hush-raised) !important;
+  --color-bannerBg: var(--hush-surface) !important;
+  --color-bannerText: var(--hush-text-2) !important;
+  --color-button-bg: var(--hush-raised) !important;
+  --color-scrollThumb: rgba(255, 255, 255, 0.12) !important;
+  --color-scrollThumbHover: rgba(255, 255, 255, 0.24) !important;
+  --color-scrollTrackHover: transparent !important;
+}
+
+html.hush body {
+  background: var(--hush-bg) !important;
+  font-family: var(--hush-font) !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html.hush * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+/* ---------- Message list ---------- */
+
+html.hush .zA {
+  height: 44px;
+  font-family: var(--hush-font) !important;
+  font-size: 13.5px !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  transition: background-color 80ms ease;
+}
+
+html.hush .zA:hover {
+  background: var(--hush-hover) !important;
+  box-shadow: none !important;
+}
+
+/* Keep every cell on one center line. The subject cell (.a4W) otherwise stretches to the full
+ * row height with its text pinned to the bottom, sitting lower than sender and date. */
+html.hush .zA > td {
+  vertical-align: middle !important;
+  align-self: center !important;
+}
+html.hush .zA > td.a4W {
+  height: auto !important;
+}
+html.hush .zA .a4W .xS,
+html.hush .zA .a4W .xT {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Selected (checkbox) rows */
+html.hush .zA.x7 {
+  background: var(--hush-accent-soft) !important;
+}
+
+/* Sender */
+html.hush .zA .yW,
+html.hush .zA .yW span {
+  color: var(--hush-text-2) !important;
+  font-weight: 400 !important;
+}
+html.hush .zA.zE .yW,
+html.hush .zA.zE .yW span {
+  color: var(--hush-text) !important;
+  font-weight: 600 !important;
+}
+
+/* Subject */
+html.hush .zA .bog,
+html.hush .zA .bqe {
+  color: var(--hush-text-2) !important;
+  font-weight: 400 !important;
+}
+html.hush .zA.zE .bog,
+html.hush .zA.zE .bqe {
+  color: var(--hush-text) !important;
+  font-weight: 500 !important;
+}
+
+/* Snippet */
+html.hush .zA .y2 {
+  color: var(--hush-text-3) !important;
+}
+
+/* Date */
+html.hush .zA .xW,
+html.hush .zA .xW span {
+  color: var(--hush-text-3) !important;
+  font-weight: 400 !important;
+  font-variant-numeric: tabular-nums;
+}
+html.hush .zA.zE .xW span {
+  color: var(--hush-text-2) !important;
+}
+
+/* Unread marker: a small accent dot instead of heavy bolding everywhere */
+html.hush .zA.zE td.yX {
+  position: relative;
+}
+html.hush .zA.zE td.yX::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 50%;
+  background: var(--hush-accent);
+}
+
+/* Quiet chrome: checkbox, star and importance only appear on hover/when meaningful */
+html.hush .zA:not(:hover):not(.x7) .oZ-x3 {
+  opacity: 0;
+}
+/* Only hide stars Gmail marks as unstarred, so starred ones always stay visible */
+html.hush .zA:not(:hover) .T-KT[aria-label="Not starred"],
+html.hush .zA:not(:hover) .T-KT[title="Not starred"] {
+  opacity: 0;
+}
+html.hush .zA .WA,
+html.hush .zA .pG {
+  display: none !important;
+}
+
+/* Label chips: present but muted */
+html.hush .zA .ar.as {
+  opacity: 0.55;
+  filter: saturate(0.6);
+}
+html.hush .zA:hover .ar.as {
+  opacity: 0.85;
+}
+
+/* ---------- Split inbox bar ---------- */
+
+#hush-splits {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 20px 10px;
+  background: var(--hush-bg);
+  border-bottom: 1px solid var(--hush-line);
+  font-family: var(--hush-font);
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+#hush-splits .hush-tab {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font: 500 13px/1 var(--hush-font);
+  letter-spacing: 0.01em;
+  color: var(--hush-text-3);
+  cursor: pointer;
+  position: relative;
+  transition: color 80ms ease, background-color 80ms ease;
+}
+
+#hush-splits .hush-tab:hover {
+  color: var(--hush-text-2);
+  background: var(--hush-hover);
+}
+
+#hush-splits .hush-tab[aria-selected="true"] {
+  color: var(--hush-text);
+}
+
+/* Unread count beside each tab label, in the tab's color */
+#hush-splits .hush-count {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--hush-text-3);
+}
+#hush-splits .hush-count:empty {
+  display: none;
+}
+
+/* Sliding underline, positioned by hush.js */
+#hush-splits .hush-indicator {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--hush-accent);
+  pointer-events: none;
+  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), width 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    background-color 260ms ease;
+}
+
+/* Rows rendered right after a tab change fade and rise in, lightly staggered */
+@keyframes hush-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+html.hush-animate .zA {
+  animation: hush-row-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+html.hush-animate .zA:nth-child(2) { animation-delay: 20ms; }
+html.hush-animate .zA:nth-child(3) { animation-delay: 40ms; }
+html.hush-animate .zA:nth-child(4) { animation-delay: 60ms; }
+html.hush-animate .zA:nth-child(5) { animation-delay: 80ms; }
+html.hush-animate .zA:nth-child(6) { animation-delay: 100ms; }
+html.hush-animate .zA:nth-child(7) { animation-delay: 120ms; }
+html.hush-animate .zA:nth-child(n + 8) { animation-delay: 140ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  #hush-splits .hush-indicator {
+    transition: none;
+  }
+  html.hush-animate .zA {
+    animation: none;
+  }
+}
+
+/* "All" sits apart on the right */
+#hush-splits .hush-tab[data-id="all"] {
+  margin-left: auto;
+}
+
+/* While in a split, hide the long generated query in the search box */
+html.hush-in-split form[role="search"] input:not(:focus) {
+  color: transparent !important;
+}
+
+/* Splits are searches, so Gmail adds its filter chips (Any time / Has attachment / ...),
+ * which Simplify floats over the list. Hide them and the space Simplify reserves for them,
+ * mirroring Simplify's own hideSearchChips mode. */
+html.hush-in-split .biW,
+html.hush-in-split .G-atb > .G6 {
+  display: none !important;
+}
+html.hush-in-split.simplify.inSearch {
+  --padding-top: 40px !important;
+}
+
+/* Single-sender splits make Gmail show a contact card (.bX), and Simplify pushes the list
+ * down 90px for it. Drop both. */
+html.hush-in-split .bGI .bX {
+  display: none !important;
+}
+html.hush-in-split.simplify.inSearch .bGI:has(.bX) .ae4 {
+  padding-top: var(--padding-top) !important;
+}
+
+/* Empty split: no "No messages matched your search" banner, just quiet space */
+html.hush-in-split .TB .TC {
+  display: none !important;
+}
+
+/* Empty split: inbox zero streak, shown in place of Gmail's message */
+#hush-zero {
+  padding: 120px 24px 0;
+  text-align: center;
+  font-family: var(--hush-font);
+  animation: hush-row-in 400ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+#hush-zero .hush-zero-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--hush-text);
+}
+#hush-zero .hush-zero-line {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--hush-text-3);
+}
+#hush-zero .hush-zero-num {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Every row in a split is in the inbox; the "Inbox" label chip is noise */
+html.hush-in-split .zA .ar.as:has([title="Inbox"]) {
+  display: none !important;
+}

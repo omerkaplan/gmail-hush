@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Hush for Gmail",
+  "version": "1.0.1",
+  "description": "A quiet, Superhuman-style dark theme and split inbox for Gmail. Layers on top of Simplify Gmail.",
+  "content_scripts": [
+    {
+      "matches": [
+        "https://mail.google.com/*"
+      ],
+      "css": [
+        "hush.css"
+      ],
+      "js": [
+        "splits.config.js",
+        "hush.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{0bd1b733-b4bb-48ca-932f-9920186a29c3}",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      },
+      "update_url": "https://raw.githubusercontent.com/omerkaplan/gmail-hush/main/updates.json"
+    }
+  },
+  "permissions": [
+    "storage"
+  ]
+}
