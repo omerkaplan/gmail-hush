@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Hush for Gmail",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A quiet, Superhuman-style dark theme and split inbox for Gmail. Layers on top of Simplify Gmail.",
   "icons": {
     "48": "icon.svg",
