@@ -36,6 +36,7 @@ inbox zero streak.
 | `src/icon.svg` | Add-on icon: the split tab bar over quiet rows, in the theme's colors |
 | `build.sh` | Lint and package as `dist/hush.xpi` |
 | `release.sh` | Publish a new version so every installed copy auto-updates |
+| `CHANGELOG.md` | What changed in each version; `release.sh` copies a version's section to its GitHub Release |
 | `updates.json` | Firefox update manifest that installed copies poll (written by `release.sh`) |
 
 Key design decisions:
@@ -79,7 +80,9 @@ add-on stays installed once you allow it:
 2. `about:config` → `xpinstall.signatures.required` → `false`
 3. Download `hush-<version>.xpi` from the latest
    [GitHub Release](../../releases/latest), then `about:addons` → gear → **Install Add-on From File…**
-   (or drag the file onto a Zen window). Accept the permission prompt. Storage is used for streak sync.
+   (or drag the file onto a Zen window). Accept the permission prompt: Gmail access to run Hush, storage for streak sync.
+   If Hush ever stops styling Gmail, check `about:addons` → Hush → **Permissions** and turn on
+   access to `mail.google.com` (it can drop after testing a temporary copy).
 4. For a shared streak: sign both Zens into the same Mozilla account with **Add-ons** sync enabled.
 
 Recommended Gmail settings: Settings → Inbox → Inbox type **Default** with category tabs unchecked, so
@@ -99,6 +102,7 @@ installs newer versions from GitHub Releases on its own. To check right away: `a
 #   then "Reload" there + refresh Gmail after each edit
 ./build.sh               # lint + package dist/hush.xpi
 ./release.sh 1.0.2       # bump version, build, commit, tag, push, GitHub Release
+                         # (add a "## 1.0.2" section to CHANGELOG.md first; it becomes the notes)
 ```
 
 Requires Node (for `npx web-ext`) and the GitHub CLI (`gh auth login`) for releasing.

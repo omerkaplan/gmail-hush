@@ -2,12 +2,17 @@
 # Publish a new version that both Macs pick up automatically.
 #   ./release.sh 1.0.1
 # Sets the version, builds dist/hush-<version>.xpi, points updates.json at it, commits, tags,
-# pushes, and attaches the .xpi to a GitHub Release. Zen checks updates.json about once a day
-# (or immediately via about:addons → gear → Check for Updates).
+# pushes, and attaches the .xpi to a GitHub Release, with the version's CHANGELOG.md section as
+# its notes. Zen checks updates.json about once a day (or immediately via about:addons → gear →
+# Check for Updates).
 set -e
 cd "$(dirname "$0")"
 VERSION="$1"
 [ -n "$VERSION" ] || { echo "usage: ./release.sh <version>   (current: $(node -p 'require("./src/manifest.json").version'))"; exit 1; }
+
+# Release notes: the "## <version>" section of CHANGELOG.md, up to the next "## ".
+NOTES=$(awk -v v="$VERSION" '/^## / { on = ($2 == v); next } on' CHANGELOG.md | sed '/./,$!d')
+[ -n "$NOTES" ] || { echo "CHANGELOG.md has no \"## $VERSION\" section. Add one first."; exit 1; }
 
 node -e '
 const fs = require("fs");
@@ -36,6 +41,8 @@ fs.writeFileSync("updates.json", JSON.stringify(updates, null, 2) + "\n");
 git add -A
 git commit -m "Release v$VERSION"
 git tag "v$VERSION"
-git push origin HEAD "v$VERSION"
-gh release create "v$VERSION" "dist/$XPI" --title "v$VERSION" --generate-notes
+# Publish the release before pushing main, so updates.json never points at a missing .xpi.
+git push origin "v$VERSION"
+gh release create "v$VERSION" "dist/$XPI" --title "v$VERSION" --notes "$NOTES"
+git push origin HEAD
 echo "Released v$VERSION — Macs will update within a day, or now via about:addons → Check for Updates."
