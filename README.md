@@ -33,6 +33,7 @@ inbox zero streak.
 | `src/splits.config.js` | **The file you edit**: tabs, their search terms, colors, streak seed |
 | `src/hush.js` | Tab bar, sliding underline, counts, streak |
 | `src/hush.css` | Theme |
+| `src/icon.svg` | Add-on icon: the split tab bar over quiet rows, in the theme's colors |
 | `build.sh` | Lint and package as `dist/hush.xpi` |
 | `release.sh` | Publish a new version so every installed copy auto-updates |
 | `updates.json` | Firefox update manifest that installed copies poll (written by `release.sh`) |

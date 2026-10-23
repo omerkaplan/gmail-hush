@@ -3,6 +3,10 @@
   "name": "Hush for Gmail",
   "version": "1.0.2",
   "description": "A quiet, Superhuman-style dark theme and split inbox for Gmail. Layers on top of Simplify Gmail.",
+  "icons": {
+    "48": "icon.svg",
+    "96": "icon.svg"
+  },
   "content_scripts": [
     {
       "matches": [
