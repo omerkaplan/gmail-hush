@@ -3,9 +3,9 @@
     "{0bd1b733-b4bb-48ca-932f-9920186a29c3}": {
       "updates": [
         {
-          "version": "1.0.1",
-          "update_link": "https://github.com/omerkaplan/gmail-hush/releases/download/v1.0.1/hush-1.0.1.xpi",
-          "update_hash": "sha256:6241c84c01324df6060f3dbb3027097a6ae8cfeb7a8b0638ae794458206d4fd2"
+          "version": "1.0.2",
+          "update_link": "https://github.com/omerkaplan/gmail-hush/releases/download/v1.0.2/hush-1.0.2.xpi",
+          "update_hash": "sha256:459428b1a7a22c65e7e0a15fe5c794601bba151315195a682dd3ad601f0fb675"
         }
       ]
     }
