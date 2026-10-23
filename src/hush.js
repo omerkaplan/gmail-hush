@@ -3,6 +3,11 @@
   const root = document.documentElement;
   root.classList.add("hush");
 
+  // An add-on reload or update starts a fresh copy without reloading Gmail, and the old copy's
+  // elements stay behind. Clear them so there's only ever one tab bar.
+  for (const el of document.querySelectorAll("#hush-splits, #hush-zero")) el.remove();
+  for (const el of document.querySelectorAll(".hush-gone")) el.classList.remove("hush-gone");
+
   const splits = (typeof HUSH_SPLITS !== "undefined" ? HUSH_SPLITS : []).map((s) => ({
     ...s,
     query: `in:inbox {${s.terms.join(" ")}}`,
@@ -337,9 +342,146 @@
     });
   };
 
+  // ---------- Hover shortcuts ----------
+  // Gmail's action shortcuts apply to checked rows, or else to its j/k cursor row. Pressing one
+  // while hovering a row (with nothing checked) ticks that row's checkbox first, so the key acts
+  // on the email under the mouse. Keys that leave the row in place get it unticked afterwards.
+  // Keys that open a menu (label, move, snooze) keep it ticked until the menu is done.
+  const HOVER_KEYS = {
+    e: "removes", "#": "removes", y: "removes", "!": "removes", m: "removes",
+    s: "stays", I: "stays", U: "stays", "+": "stays", "=": "stays", "-": "stays",
+    l: "menu", v: "menu", b: "menu",
+  };
+  // The row under the mouse, found from the last pointer position so it stays right when rows
+  // vanish or shift underneath a still mouse. j/k hands control back to Gmail's own cursor
+  // until the mouse moves again.
+  let pointer = null;
+  document.addEventListener("mousemove", (e) => {
+    pointer = { x: e.clientX, y: e.clientY };
+  }, true);
+  document.addEventListener("mouseleave", () => {
+    pointer = null;
+  });
+  const hoveredRow = () =>
+    pointer && document.elementFromPoint(pointer.x, pointer.y)?.closest("tr.zA:not(.hush-gone)");
+
+  const rowCheckbox = (row) =>
+    row.querySelector('.oZ-x3 [role="checkbox"]') || row.querySelector('[role="checkbox"]');
+  const isTicked = (row) => rowCheckbox(row)?.getAttribute("aria-checked") === "true";
+  function clickBox(box) {
+    for (const type of ["mousedown", "mouseup", "click"]) {
+      box.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+    }
+  }
+
+  // Gmail picks up a ticked checkbox asynchronously, so the original key would find nothing
+  // selected. Hold it back, tick the row, then replay the key once Gmail has caught up.
+  function replayKey(target, e) {
+    const init = {
+      key: e.key, code: e.code, keyCode: e.keyCode, which: e.which, shiftKey: e.shiftKey,
+      bubbles: true, cancelable: true, view: window,
+    };
+    target.dispatchEvent(new KeyboardEvent("keydown", init));
+    target.dispatchEvent(new KeyboardEvent("keypress", {
+      ...init, keyCode: 0, charCode: e.key.charCodeAt(0), which: e.key.charCodeAt(0),
+    }));
+    target.dispatchEvent(new KeyboardEvent("keyup", init));
+  }
+
+  // Resolves once check() is true (re-checked on every class change of the row), or after ms.
+  function waitFor(row, check, ms) {
+    return new Promise((resolve) => {
+      if (check()) return resolve();
+      const finish = () => {
+        watcher.disconnect();
+        clearTimeout(timer);
+        resolve();
+      };
+      const watcher = new MutationObserver(() => check() && finish());
+      watcher.observe(row.parentElement || row, { attributes: true, attributeFilter: ["class"], childList: true, subtree: true });
+      const timer = setTimeout(finish, ms);
+    });
+  }
+
+  // Hidden rows are remembered by thread, because Gmail often redraws the list (archive in
+  // particular) before its server catches up, bringing the email back as a fresh row.
+  // Re-hidden from the MutationObserver, which runs before the redraw is painted. If Gmail
+  // still shows the thread after GONE_MS (the action failed), it comes back.
+  const GONE_MS = 8000;
+  const gone = new Map(); // thread id -> time hidden
+  const threadId = (row) =>
+    row.querySelector("[data-thread-id]")?.getAttribute("data-thread-id") ||
+    row.querySelector("[data-legacy-thread-id]")?.getAttribute("data-legacy-thread-id");
+  function hideRow(row) {
+    row.classList.add("hush-gone");
+    const id = threadId(row);
+    if (id) gone.set(id, performance.now());
+    else setTimeout(() => row.classList.remove("hush-gone"), GONE_MS);
+  }
+  function hideGone() {
+    if (!gone.size) return;
+    const now = performance.now();
+    for (const row of document.querySelectorAll("tr.zA")) {
+      const id = threadId(row);
+      if (!id || !gone.has(id)) continue;
+      row.classList.toggle("hush-gone", now - gone.get(id) < GONE_MS);
+    }
+    for (const [id, at] of gone) if (now - at >= GONE_MS) gone.delete(id);
+  }
+  setInterval(hideGone, 2000); // unhides expired threads even if the page goes quiet
+
+  // Actions run one at a time, so a queued row is never ticked alongside one still in flight.
+  const pending = new Set();
+  let queue = Promise.resolve();
+  async function act(row, kind, target, e) {
+    clickBox(rowCheckbox(row));
+    await waitFor(row, () => row.classList.contains("x7"), 1000);
+    replayKey(target.isConnected ? target : document.body, e);
+    if (kind === "removes") {
+      await waitFor(row, () => !row.isConnected || !row.classList.contains("x7"), 1500);
+    } else if (kind === "stays") {
+      await new Promise((r) => setTimeout(r, 300));
+      if (row.isConnected && isTicked(row)) clickBox(rowCheckbox(row));
+    }
+    pending.delete(row);
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (!e.isTrusted) return; // our own replay
+    if (e.key === "j" || e.key === "k") pointer = null;
+    const kind = HOVER_KEYS[e.key];
+    if (!kind || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+    if (e.target.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return;
+    const view = currentView();
+    if (view?.reading) return; // an open email is already the target
+    const row = hoveredRow();
+    const main = visibleMain();
+    if (!row || !main?.contains(row) || !rowCheckbox(row) || pending.has(row)) return;
+    // Respect a manual selection; rows ticked by a queued or hidden action don't count.
+    const manual = (r) => isTicked(r) && !pending.has(r) && !r.classList.contains("hush-gone");
+    if ([...main.querySelectorAll("tr.zA")].some(manual)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    // Swallow the matching keypress too, so Gmail never sees the original key.
+    window.addEventListener("keypress", (p) => {
+      if (p.isTrusted) {
+        p.preventDefault();
+        p.stopImmediatePropagation();
+      }
+    }, { capture: true, once: true });
+    // Rows that are about to leave the list go immediately; Gmail catches up in the background.
+    if (kind === "removes") hideRow(row);
+    pending.add(row);
+    const target = e.target;
+    queue = queue.then(() => act(row, kind, target, e)).catch(() => pending.delete(row));
+  }, true);
+
   window.addEventListener("hashchange", schedule);
   const start = () => {
-    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+    new MutationObserver(() => {
+      hideGone();
+      schedule();
+    }).observe(document.body, { childList: true, subtree: true });
     schedule();
   };
   if (document.body) start();

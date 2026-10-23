@@ -84,6 +84,14 @@ html.hush .zA:hover {
   box-shadow: none !important;
 }
 
+/* Square row highlights (Simplify rounds hover, focus and selection) */
+html.hush .zA,
+html.hush .zA > td,
+html.hush .zA::before,
+html.hush .zA::after {
+  border-radius: 0 !important;
+}
+
 /* Keep every cell on one center line. The subject cell (.a4W) otherwise stretches to the full
  * row height with its text pinned to the bottom, sitting lower than sender and date. */
 html.hush .zA > td {
@@ -102,6 +110,11 @@ html.hush .zA .a4W .xT {
 /* Selected (checkbox) rows */
 html.hush .zA.x7 {
   background: var(--hush-accent-soft) !important;
+}
+
+/* Archived/deleted from hover: gone at once while Gmail finishes in the background */
+html.hush .zA.hush-gone {
+  display: none !important;
 }
 
 /* Sender */
@@ -142,22 +155,6 @@ html.hush .zA .xW span {
 }
 html.hush .zA.zE .xW span {
   color: var(--hush-text-2) !important;
-}
-
-/* Unread marker: a small accent dot instead of heavy bolding everywhere */
-html.hush .zA.zE td.yX {
-  position: relative;
-}
-html.hush .zA.zE td.yX::before {
-  content: "";
-  position: absolute;
-  left: -10px;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  margin-top: -3px;
-  border-radius: 50%;
-  background: var(--hush-accent);
 }
 
 /* Quiet chrome: checkbox, star and importance only appear on hover/when meaningful */

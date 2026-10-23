@@ -4,13 +4,13 @@ A quiet, Superhuman-style dark theme and split inbox for Gmail, built as a Firef
 layers on top of [Simplify Gmail](https://simpl.fyi).
 
 Built after cancelling Superhuman, to keep its calm look and split inbox without the subscription.
-No keyboard shortcuts or other Superhuman features. Just the look, the splits, and the
+No Superhuman shortcuts or other features. Just the look, the splits, hover shortcuts, and the
 inbox zero streak.
 
 ## What it does
 
 - **Dark, minimal theme.** Near-black palette, system font, compact 44px rows, no row borders.
-  Sender, subject and date read by brightness and weight. Unread rows get a small accent dot.
+  Sender, subject and date read by brightness and weight. Unread rows keep Simplify's blue dot.
   Checkboxes and unstarred stars only show on hover. Importance markers are hidden and label chips are muted.
 - **Split inbox tabs**: **Inbox · Docs · Calendar · Alerts · All**
   - **Docs**: Google Drive/Docs/Sheets/Slides shares and comments
@@ -20,6 +20,8 @@ inbox zero streak.
   - **All**: Gmail's plain inbox
   - Each tab has its own underline color. The underline slides between tabs and rows fade in on switch.
 - **Per-tab email counts** next to each tab label.
+- **Hover shortcuts.** Gmail's action keys (`e`, `#`, `s`, `Shift+I`, `l`, …) act on the email under the
+  mouse, without ticking its checkbox first. Archived and deleted rows vanish at once.
 - **Inbox zero streak.** An empty split shows how many weeks in a row you've hit inbox zero.
   Seeded with the 89-week streak carried over from Superhuman.
 
@@ -56,6 +58,10 @@ Key design decisions:
   total, or else the visible row count. Counts are cached in `localStorage` per machine. They're only as
   fresh as your last visit to that tab, and can show `50+` for big tabs. (The Gmail API would give live
   counts, but needs a Google Cloud OAuth client. We deliberately skipped that.)
+- **Hover shortcuts tick, then replay.** Gmail only applies shortcuts to checked rows or its j/k cursor.
+  Hush swallows the key, ticks the hovered row, waits for Gmail to mark it selected (`.x7`), then
+  replays the key. Removing actions hide the row immediately (`.hush-gone`, remembered by thread id so Gmail's redraws stay hidden) and run one at a time so
+  queued rows never share a selection. A manual selection, an open email, or j/k turns this off.
 - **Inbox zero streak.** An ISO week (Mon–Sun) counts once the **Inbox** tab (or All) is genuinely empty.
   Gmail's empty-state message must be present, so a loading list doesn't count. The current week doesn't
   break the streak until it's over. Weeks are stored as a set in `localStorage` and in
@@ -129,3 +135,4 @@ Built over one session in October 2026, iterating from screenshots:
 10. Alerts tab for Honeybadger. Self-healing stale tab URLs.
 11. Inbox zero streak, seeded at 89 weeks from Superhuman.
 12. Permanent install, synced streak, GitHub auto-updates.
+13. Hover shortcuts and square row highlights.
