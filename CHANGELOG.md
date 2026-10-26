@@ -2,6 +2,12 @@
 
 Each version's section is also its GitHub Release notes (`release.sh` copies it over).
 
+## 1.0.6 (2026-10-26)
+
+- Inbox, Docs, Calendar and Alerts are sorted newest first. They're Gmail searches, which Gmail
+  ranks its own way, so Hush re-sorts each page's rows by timestamp. `j`/`k` still follows
+  Gmail's order.
+
 ## 1.0.5 (2026-10-26)
 
 - The tab bar shows which account you're in (its email address, in the accent color, before

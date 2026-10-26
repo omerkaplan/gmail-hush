@@ -502,10 +502,39 @@
     queue = queue.then(() => act(row, kind, target, e)).catch(() => pending.delete(row));
   }, true);
 
+  // ---------- Newest first on split tabs ----------
+  // Splits are Gmail searches, and Gmail ranks search results its own way rather than by date.
+  // Re-sort the rows by their timestamp (the date cell's tooltip, e.g. "Mon, Oct 26, 2026,
+  // 4:05 PM"). Runs from the MutationObserver, before paint, and is a no-op once sorted, so
+  // Gmail's redraws just get sorted again. Only the rows on the current page are sorted, and
+  // j/k still steps through Gmail's own order.
+  const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
+  function rowTime(row) {
+    const title = row.querySelector(".xW [title]")?.getAttribute("title") || "";
+    const m = title.match(/([A-Z][a-z]{2}) (\d{1,2}), (\d{4}),? (\d{1,2}):(\d{2})\s*([AP]M)/);
+    if (!m || !(m[1] in MONTHS)) return NaN;
+    const hour = (Number(m[4]) % 12) + (m[6] === "PM" ? 12 : 0);
+    return new Date(Number(m[3]), MONTHS[m[1]], Number(m[2]), hour, Number(m[5])).getTime();
+  }
+  function sortSplit() {
+    if (!root.classList.contains("hush-in-split")) return;
+    const main = visibleMain();
+    for (const body of main ? main.querySelectorAll("tbody") : []) {
+      const rows = [...body.children].filter((r) => r.matches("tr.zA"));
+      if (rows.length < 2) continue;
+      const times = rows.map(rowTime);
+      if (times.some(Number.isNaN)) continue; // unrecognized date format: leave Gmail's order
+      if (times.every((t, i) => i === 0 || times[i - 1] >= t)) continue;
+      const sorted = rows.map((row, i) => ({ row, t: times[i] })).sort((a, b) => b.t - a.t);
+      for (const { row } of sorted) body.append(row);
+    }
+  }
+
   window.addEventListener("hashchange", schedule);
   const start = () => {
     new MutationObserver(() => {
       hideGone();
+      sortSplit();
       schedule();
     }).observe(document.body, { childList: true, subtree: true });
     schedule();

@@ -20,6 +20,7 @@ inbox zero streak.
   - **All**: Gmail's plain inbox
   - Each tab has its own underline color. The underline slides between tabs and rows fade in on switch.
 - **Per-tab email counts** next to each tab label.
+- **Newest first on every tab.** Split tabs are re-sorted by date (see below).
 - **Account label.** The tab bar shows the account's email address, so work and personal tabs are easy to tell apart.
 - **Hover shortcuts.** Gmail's action keys (`e`, `#`, `s`, `Shift+I`, `l`, …) act on the email under the
   mouse, without ticking its checkbox first. Archived and deleted rows vanish at once.
@@ -61,6 +62,10 @@ Key design decisions:
   total, or else the visible row count. Counts are cached in `localStorage` per machine. They're only as
   fresh as your last visit to that tab, and can show `50+` for big tabs. (The Gmail API would give live
   counts, but needs a Google Cloud OAuth client. We deliberately skipped that.)
+- **Split tabs are re-sorted by date.** Gmail ranks search results its own way, with no sort option,
+  so Hush reorders each page's rows by the date cell's tooltip timestamp, before paint. Unparseable
+  dates (e.g. a non-English UI) leave Gmail's order. Only the current page (up to 50) is sorted, and
+  j/k still walks Gmail's original order.
 - **Hover shortcuts tick, then replay.** Gmail only applies shortcuts to checked rows or its j/k cursor.
   Hush swallows the key, ticks the hovered row, waits for Gmail to mark it selected (`.x7`), then
   replays the key. Removing actions hide the row immediately (`.hush-gone`, remembered by thread id so Gmail's redraws stay hidden) and run one at a time so
@@ -121,7 +126,7 @@ Search operators: <https://support.google.com/mail/answer/7190>.
 - Gmail's class names are obfuscated and can change. If something breaks after a Gmail update, it's
   almost always a selector in `hush.css`.
 - Counts for tabs you haven't opened recently are stale.
-- The "Not starred" hover rule matches Gmail's English UI label.
+- The "Not starred" hover rule and the split-tab date sort expect Gmail's English UI.
 - Emails in splits are still in Gmail's inbox, so Gmail's own unread badge counts them. Don't use a Gmail
   "Skip the Inbox" filter for split senders, because tabs only show inbox mail.
 
