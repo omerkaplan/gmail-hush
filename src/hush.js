@@ -1,125 +1,83 @@
-// Hush for Gmail: theme hook + split inbox tab bar.
+// Hush for Gmail: a quiet theme hook, plus a slim header (account, inbox zero streak, health)
+// and hover shortcuts on the inbox list.
 (() => {
   const root = document.documentElement;
   root.classList.add("hush");
 
   // An add-on reload or update starts a fresh copy without reloading Gmail, and the old copy's
-  // elements stay behind. Clear them so there's only ever one tab bar.
-  for (const el of document.querySelectorAll("#hush-splits, #hush-zero")) el.remove();
+  // elements stay behind. Clear them so there's only ever one header.
+  for (const el of document.querySelectorAll("#hush-header, #hush-splits, #hush-zero, #hush-bg")) el.remove();
   for (const el of document.querySelectorAll(".hush-gone")) el.classList.remove("hush-gone");
+  root.classList.remove("hush-in-split", "hush-animate");
 
-  const splits = (typeof HUSH_SPLITS !== "undefined" ? HUSH_SPLITS : []).map((s) => ({
-    ...s,
-    query: `in:inbox {${s.terms.join(" ")}}`,
-  }));
+  const account = location.pathname.match(/\/mail\/u\/\d+/)?.[0] ?? "/mail/u/0";
 
-  // "Inbox" = inbox minus every split; "All" = Gmail's plain inbox.
-  const restQuery = ["in:inbox", ...splits.flatMap((s) => s.terms.map((t) => `-${t}`))].join(" ");
-  const tabs = [
-    { id: "rest", label: "Inbox", query: restQuery, color: typeof HUSH_INBOX_COLOR !== "undefined" ? HUSH_INBOX_COLOR : undefined },
-    ...splits,
-    { id: "all", label: "All", hash: "#inbox", color: typeof HUSH_ALL_COLOR !== "undefined" ? HUSH_ALL_COLOR : undefined },
-  ];
+  // The inbox list (#inbox, or no hash at all), as opposed to an open email or another view.
+  const hashParts = () => location.hash.slice(1).split("/").filter(Boolean);
+  const inInbox = () => {
+    const parts = hashParts();
+    return parts.length === 0 || (parts.length === 1 && parts[0] === "inbox");
+  };
+  // An open email: the last part of the hash is Gmail's message id (#inbox/FMfcgz…).
+  const isReading = () => {
+    const parts = hashParts();
+    return parts.length > 1 && /^[A-Za-z0-9]{16,}$/.test(parts[parts.length - 1]);
+  };
 
-  const norm = (q) => q.replace(/\s+/g, " ").trim().toLowerCase();
-  const hashFor = (tab) =>
-    tab.hash || "#search/" + encodeURIComponent(tab.query).replace(/%20/g, "+");
-
-  // Returns { tab, reading } for the current URL, or null when outside the inbox / splits.
-  function currentView() {
-    const parts = location.hash.slice(1).split("/");
-    if (parts[0] === "inbox") {
-      return { tab: tabs.find((t) => t.id === "all"), reading: parts.length > 1 };
-    }
-    if (parts[0] === "search" && parts[1]) {
-      const q = norm(decodeURIComponent(parts[1].replace(/\+/g, " ")));
-      const tab = tabs.find((t) => t.query && norm(t.query) === q);
-      if (tab) return { tab, reading: parts.length > 2 };
-      const old = staleTab(q);
-      if (old) return { tab: old, reading: parts.length > 2, stale: true };
+  function visibleMain() {
+    for (const el of document.querySelectorAll('div[role="main"]')) {
+      if (el.offsetParent !== null) return el;
     }
     return null;
   }
 
-  // A tab URL from before splits.config.js was edited (bookmark, history, open window).
-  // Recognize it by shape so it can be upgraded to the tab's current query.
-  function staleTab(q) {
-    if (q.startsWith("in:inbox -")) return tabs.find((t) => t.id === "rest");
-    const inner = q.match(/^in:inbox \{(.*)\}$/)?.[1];
-    if (!inner) return null;
-    return splits.find((s) => s.terms.some((t) => inner.includes(norm(t)))) || null;
+  // ---------- Header ----------
+  let header, accountEl, healthEl, streakEl;
+  function buildHeader() {
+    header = document.createElement("div");
+    header.id = "hush-header";
+    accountEl = document.createElement("span");
+    accountEl.className = "hush-account";
+    healthEl = document.createElement("span");
+    healthEl.className = "hush-health";
+    streakEl = document.createElement("span");
+    streakEl.className = "hush-streak";
+    header.append(accountEl, healthEl, streakEl);
   }
 
-  let bar, indicator, accountEl;
-  function buildBar() {
-    bar = document.createElement("nav");
-    bar.id = "hush-splits";
-    bar.setAttribute("role", "tablist");
-    for (const tab of tabs) {
-      if (tab.id === "all") {
-        accountEl = document.createElement("span");
-        accountEl.className = "hush-account";
-        bar.append(accountEl);
-      }
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "hush-tab";
-      btn.dataset.id = tab.id;
-      btn.setAttribute("role", "tab");
-      const label = document.createElement("span");
-      label.textContent = tab.label;
-      const count = document.createElement("span");
-      count.className = "hush-count";
-      if (tab.color) count.style.color = tab.color;
-      btn.append(label, count);
-      btn.addEventListener("click", () => {
-        location.hash = hashFor(tab);
-      });
-      bar.append(btn);
-    }
-    indicator = document.createElement("span");
-    indicator.className = "hush-indicator";
-    bar.append(indicator);
-    renderCounts();
-  }
-
-  // ---------- Tab counts ----------
-  // Read from the page: whenever a tab's list is on screen, record how many emails it holds
-  // (Gmail's "1–N of M" total when present, else the visible rows). Counts for other tabs are
-  // as fresh as your last visit, and persist across reloads.
-  const account = location.pathname.match(/\/mail\/u\/\d+/)?.[0] ?? "/mail/u/0";
-  const storeKey = `hush:counts:${account}`;
-  let counts = {};
-  try {
-    counts = JSON.parse(localStorage.getItem(storeKey)) || {};
-  } catch {
-    counts = {};
+  // Reads the inbox list on screen: how many rows, and whether Gmail says it's empty.
+  function readList() {
+    const main = visibleMain();
+    if (!main) return null;
+    const rows = [...main.querySelectorAll("tr.zA")].filter((r) => r.offsetParent !== null).length;
+    // Zero rows alone could just mean "still loading"; an empty-state message confirms it.
+    const emptyMsg =
+      [...main.querySelectorAll(".TB .TC")].some((e) => e.textContent.trim()) || root.classList.contains("inboxZero");
+    return { main, rows, emptyMsg };
   }
 
   function measure() {
-    const view = currentView();
-    const main = visibleMain();
-    if (!view || view.reading || !main) return;
-    const rows = [...main.querySelectorAll("tr.zA")].filter((r) => r.offsetParent !== null).length;
-    const range = main.querySelector(".Dj")?.textContent || "";
-    const total = range.match(/\bof\s+([\d,.]+)/)?.[1]?.replace(/[,.]/g, "");
-    const value = total ? total : rows >= 50 ? `${rows}+` : String(rows);
-    // Zero rows alone could just mean "still loading"; Gmail's empty-state message confirms it.
-    const emptyMsg = [...main.querySelectorAll(".TB .TC")].some((e) => e.textContent.trim());
-    const empty = rows === 0 && (emptyMsg || (view.tab.id === "all" && root.classList.contains("inboxZero")));
-    updateZero(view, main, empty);
-    if (counts[view.tab.id] === value) return;
-    counts[view.tab.id] = value;
-    try {
-      localStorage.setItem(storeKey, JSON.stringify(counts));
-    } catch {
-      // Storage blocked: counts just won't survive a reload.
-    }
-    renderCounts();
+    if (!inInbox()) return;
+    const list = readList();
+    if (!list) return;
+    if (list.rows === 0 && list.emptyMsg) recordZero();
+    renderStreak();
+    checkHealth(list);
   }
 
+  // Gmail fills lists in bursts and rarely goes fully quiet, so throttle rather than debounce:
+  // any change after a measurement schedules another, so the settled state always gets counted.
+  let measureTimer = null;
+  const measureSoon = () => {
+    if (measureTimer) return;
+    measureTimer = setTimeout(() => {
+      measureTimer = null;
+      measure();
+    }, 700);
+  };
+
   // ---------- Inbox zero streak ----------
-  // A week (ISO, Monday–Sunday) counts once the Inbox tab (or All) is emptied at least once.
+  // A week (ISO, Monday–Sunday) counts once the inbox is emptied at least once.
   // The current week only breaks the streak once it's over.
   // Weeks are a set, so copies from different machines merge by union: localStorage is the fast
   // local copy, browser.storage.sync carries it to other machines via Firefox/Zen Sync.
@@ -201,104 +159,12 @@
     }
   });
 
-  let zeroEl = null;
-  function updateZero(view, main, empty) {
-    if (empty && (view.tab.id === "rest" || view.tab.id === "all")) recordZero();
-    // "All" keeps Simplify's own inbox-zero screen; splits get ours in place of Gmail's message.
-    if (!empty || view.tab.id === "all") {
-      zeroEl?.remove();
-      return;
-    }
-    const { n, thisWeek } = streak();
-    const title = view.tab.id === "rest" ? "Inbox zero" : "All clear";
-    let line;
-    if (n === 0) line = "Clear your Inbox to start a streak";
-    else if (thisWeek) line = n === 1 ? "week of inbox zero" : "weeks in a row of inbox zero";
-    else line = `week streak · clear your Inbox this week to keep it`;
-    const key = `${view.tab.id}|${n}|${thisWeek}`;
-    if (zeroEl?.dataset.key === key && zeroEl.parentElement === main) return;
-    zeroEl?.remove();
-    zeroEl = document.createElement("div");
-    zeroEl.id = "hush-zero";
-    zeroEl.dataset.key = key;
-    const titleEl = document.createElement("div");
-    titleEl.className = "hush-zero-title";
-    titleEl.textContent = title;
-    const lineEl = document.createElement("div");
-    lineEl.className = "hush-zero-line";
-    if (n > 0) {
-      const num = document.createElement("span");
-      num.className = "hush-zero-num";
-      num.textContent = String(n);
-      if (view.tab.color) num.style.color = view.tab.color;
-      lineEl.append(num, " ");
-    }
-    lineEl.append(line);
-    zeroEl.append(titleEl, lineEl);
-    (bar?.parentElement === main ? bar : main.firstChild)?.after(zeroEl);
-  }
-
-  // Gmail fills lists in bursts and rarely goes fully quiet, so throttle rather than debounce:
-  // any change after a measurement schedules another, so the settled state always gets counted.
-  let measureTimer = null;
-  const measureSoon = () => {
-    if (measureTimer) return;
-    measureTimer = setTimeout(() => {
-      measureTimer = null;
-      measure();
-    }, 700);
-  };
-
-  function renderCounts() {
-    if (!bar) return;
-    for (const btn of bar.querySelectorAll(".hush-tab")) {
-      const n = counts[btn.dataset.id];
-      btn.querySelector(".hush-count").textContent = n && n !== "0" ? n : "";
-    }
-    schedule(); // tab widths may have changed; re-place the underline
-  }
-
-  // The underline is one element that slides between tabs. Gmail moves the bar between view
-  // containers mid-switch, which kills a running transition, so a re-parent shortly after a
-  // move replays the slide from where it started.
-  let indicatorAt = null;
-  let slideFrom = null;
-  let slideStart = 0;
-  const SLIDE_MS = 260;
-
-  function setIndicator(pos, animate) {
-    indicator.style.transition = animate ? "" : "none";
-    indicator.style.transform = `translateX(${pos.x}px)`;
-    indicator.style.width = `${pos.w}px`;
-    indicator.style.backgroundColor = pos.color || "";
-  }
-
-  function placeIndicator(btn, reparented) {
-    if (!btn.offsetWidth) return;
-    const color = tabs.find((t) => t.id === btn.dataset.id)?.color;
-    const to = { x: btn.offsetLeft + 12, w: btn.offsetWidth - 24, color };
-    const moved = !indicatorAt || to.x !== indicatorAt.x || to.w !== indicatorAt.w;
-    const replay = reparented && performance.now() - slideStart < SLIDE_MS;
-    if (!moved && !replay) return;
-    if (moved) {
-      slideFrom = indicatorAt;
-      slideStart = performance.now();
-    }
-    if (slideFrom) {
-      setIndicator(slideFrom, false);
-      void indicator.offsetWidth; // commit the start position before transitioning
-    }
-    setIndicator(to, !!slideFrom);
-    indicatorAt = to;
-  }
-
-  // Briefly flag the page after a tab change so freshly rendered rows animate in.
-  let lastTabId = null;
-  let animateTimer;
-  function flagTabChange() {
-    root.classList.add("hush-animate");
-    clearTimeout(animateTimer);
-    animateTimer = setTimeout(() => root.classList.remove("hush-animate"), 1200);
+  function renderStreak() {
+    if (!streakEl) return;
+    const { n } = streak();
+    const text = n > 0 ? `${n}-week streak` : "";
+    if (streakEl.textContent !== text) streakEl.textContent = text;
+    streakEl.title = n > 0 ? "Weeks in a row you've reached inbox zero" : "";
   }
 
   // ---------- Account ----------
@@ -313,47 +179,56 @@
       ""
     );
   }
+  // HUSH_ACCOUNT_COLORS (hush.config.js) maps a full address or "@domain" to the label's color.
+  const accountColors = typeof HUSH_ACCOUNT_COLORS !== "undefined" ? HUSH_ACCOUNT_COLORS : {};
+  function accountColor(email) {
+    const lower = email.toLowerCase();
+    const at = lower.indexOf("@");
+    return accountColors[lower] || (at >= 0 && accountColors[lower.slice(at)]) || "";
+  }
   function renderAccount() {
     const email = accountEmail();
     if (!accountEl || accountEl.textContent === email) return;
     accountEl.textContent = email;
     accountEl.title = email;
-    schedule(); // the All tab may have moved; re-place the underline
+    accountEl.style.color = accountColor(email);
   }
 
-  function visibleMain() {
-    for (const el of document.querySelectorAll('div[role="main"]')) {
-      if (el.offsetParent !== null) return el;
+  // ---------- Health check ----------
+  // Hush leans on Gmail's internal class names, which Gmail can rename at any time. A check
+  // that keeps failing for HEALTH_GRACE_MS (so not just a page still loading) shows a small
+  // warning in the header naming what stopped working; hover it for the full list.
+  const HEALTH_GRACE_MS = 8000;
+  const failingSince = {};
+  function checkHealth(list) {
+    const row = list.main.querySelector("tr.zA");
+    const checks = {
+      "Simplify Gmail isn't active": !root.classList.contains("simplify"),
+      "Can't find email rows (inbox zero streak may miss a week)": !row && !list.emptyMsg,
+      "Can't find row checkboxes (hover shortcuts are off)": !!row && !rowCheckbox(row),
+      "Can't identify threads (archived emails may flicker back)": !!row && !threadId(row),
+      "Can't find the account address": !accountEmail(),
+    };
+    const now = performance.now();
+    const problems = [];
+    for (const [problem, failing] of Object.entries(checks)) {
+      if (!failing) delete failingSince[problem];
+      else if (now - (failingSince[problem] ??= now) >= HEALTH_GRACE_MS) problems.push(problem);
     }
-    return null;
+    const text = problems.length ? `⚠ ${problems[0]}${problems.length > 1 ? ` +${problems.length - 1}` : ""}` : "";
+    if (healthEl.textContent !== text) healthEl.textContent = text;
+    healthEl.title = problems.length ? `Hush: Gmail may have changed.\n\n${problems.join("\n")}` : "";
   }
 
   function sync() {
-    const view = currentView();
-    root.classList.toggle("hush-in-split", !!view && view.tab.id !== "all");
-    if (!view || view.reading) {
-      bar?.remove();
-      zeroEl?.remove();
+    if (!inInbox()) {
+      header?.remove();
       return;
     }
-    if (view.stale) {
-      location.replace(location.href.split("#")[0] + hashFor(view.tab));
-      return;
-    }
-    if (lastTabId && view.tab.id !== lastTabId) flagTabChange();
-    lastTabId = view.tab.id;
-    if (!bar) buildBar();
+    if (!header) buildHeader();
     renderAccount();
-    let active;
-    for (const btn of bar.querySelectorAll(".hush-tab")) {
-      const selected = btn.dataset.id === view.tab.id;
-      btn.setAttribute("aria-selected", String(selected));
-      if (selected) active = btn;
-    }
     const main = visibleMain();
-    const reparented = !!main && bar.parentElement !== main;
-    if (reparented) main.prepend(bar);
-    if (bar.isConnected) placeIndicator(active, reparented);
+    if (main && header.parentElement !== main) main.prepend(header);
     measureSoon();
   }
 
@@ -478,8 +353,7 @@
     const kind = HOVER_KEYS[e.key];
     if (!kind || e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
     if (e.target.closest?.('input, textarea, select, [contenteditable="true"], [role="textbox"]')) return;
-    const view = currentView();
-    if (view?.reading) return; // an open email is already the target
+    if (isReading()) return; // an open email is already the target
     const row = hoveredRow();
     const main = visibleMain();
     if (!row || !main?.contains(row) || !rowCheckbox(row) || pending.has(row)) return;
@@ -502,39 +376,11 @@
     queue = queue.then(() => act(row, kind, target, e)).catch(() => pending.delete(row));
   }, true);
 
-  // ---------- Newest first on split tabs ----------
-  // Splits are Gmail searches, and Gmail ranks search results its own way rather than by date.
-  // Re-sort the rows by their timestamp (the date cell's tooltip, e.g. "Mon, Oct 26, 2026,
-  // 4:05 PM"). Runs from the MutationObserver, before paint, and is a no-op once sorted, so
-  // Gmail's redraws just get sorted again. Only the rows on the current page are sorted, and
-  // j/k still steps through Gmail's own order.
-  const MONTHS = { Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5, Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11 };
-  function rowTime(row) {
-    const title = row.querySelector(".xW [title]")?.getAttribute("title") || "";
-    const m = title.match(/([A-Z][a-z]{2}) (\d{1,2}), (\d{4}),? (\d{1,2}):(\d{2})\s*([AP]M)/);
-    if (!m || !(m[1] in MONTHS)) return NaN;
-    const hour = (Number(m[4]) % 12) + (m[6] === "PM" ? 12 : 0);
-    return new Date(Number(m[3]), MONTHS[m[1]], Number(m[2]), hour, Number(m[5])).getTime();
-  }
-  function sortSplit() {
-    if (!root.classList.contains("hush-in-split")) return;
-    const main = visibleMain();
-    for (const body of main ? main.querySelectorAll("tbody") : []) {
-      const rows = [...body.children].filter((r) => r.matches("tr.zA"));
-      if (rows.length < 2) continue;
-      const times = rows.map(rowTime);
-      if (times.some(Number.isNaN)) continue; // unrecognized date format: leave Gmail's order
-      if (times.every((t, i) => i === 0 || times[i - 1] >= t)) continue;
-      const sorted = rows.map((row, i) => ({ row, t: times[i] })).sort((a, b) => b.t - a.t);
-      for (const { row } of sorted) body.append(row);
-    }
-  }
-
   window.addEventListener("hashchange", schedule);
+  setInterval(schedule, 15000); // keeps the streak and health check current while the page is quiet
   const start = () => {
     new MutationObserver(() => {
       hideGone();
-      sortSplit();
       schedule();
     }).observe(document.body, { childList: true, subtree: true });
     schedule();

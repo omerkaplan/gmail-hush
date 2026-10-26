@@ -180,175 +180,49 @@ html.hush .zA:hover .ar.as {
   opacity: 0.85;
 }
 
-/* ---------- Split inbox bar ---------- */
+/* ---------- Header ---------- */
+/* A slim line above the inbox list: which account this is, and the inbox zero streak. */
 
-#hush-splits {
+#hush-header {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 14px 20px 10px;
+  gap: 16px;
+  padding: 14px 32px 12px;
   background: var(--hush-bg);
   border-bottom: 1px solid var(--hush-line);
-  font-family: var(--hush-font);
+  font: 500 12px/1.5 var(--hush-font); /* room for descenders, which overflow: hidden would clip */
   position: sticky;
   top: 0;
   z-index: 3;
 }
 
-#hush-splits .hush-tab {
-  appearance: none;
-  border: 0;
-  background: none;
-  padding: 6px 12px;
-  border-radius: 7px;
-  font: 500 13px/1 var(--hush-font);
-  letter-spacing: 0.01em;
-  color: var(--hush-text-3);
-  cursor: pointer;
-  position: relative;
-  transition: color 80ms ease, background-color 80ms ease;
-}
-
-#hush-splits .hush-tab:hover {
-  color: var(--hush-text-2);
-  background: var(--hush-hover);
-}
-
-#hush-splits .hush-tab[aria-selected="true"] {
-  color: var(--hush-text);
-}
-
-/* Unread count beside each tab label, in the tab's color */
-#hush-splits .hush-count {
-  margin-left: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--hush-text-3);
-}
-#hush-splits .hush-count:empty {
-  display: none;
-}
-
-/* Sliding underline, positioned by hush.js */
-#hush-splits .hush-indicator {
-  position: absolute;
-  left: 0;
-  bottom: -1px;
-  width: 0;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--hush-accent);
-  pointer-events: none;
-  transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), width 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    background-color 260ms ease;
-}
-
-/* Rows rendered right after a tab change fade and rise in, lightly staggered */
-@keyframes hush-row-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-}
-html.hush-animate .zA {
-  animation: hush-row-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-}
-html.hush-animate .zA:nth-child(2) { animation-delay: 20ms; }
-html.hush-animate .zA:nth-child(3) { animation-delay: 40ms; }
-html.hush-animate .zA:nth-child(4) { animation-delay: 60ms; }
-html.hush-animate .zA:nth-child(5) { animation-delay: 80ms; }
-html.hush-animate .zA:nth-child(6) { animation-delay: 100ms; }
-html.hush-animate .zA:nth-child(7) { animation-delay: 120ms; }
-html.hush-animate .zA:nth-child(n + 8) { animation-delay: 140ms; }
-
-@media (prefers-reduced-motion: reduce) {
-  #hush-splits .hush-indicator {
-    transition: none;
-  }
-  html.hush-animate .zA {
-    animation: none;
-  }
-}
-
-/* "All" sits apart on the right */
-#hush-splits .hush-tab[data-id="all"] {
-  margin-left: auto;
-}
-
-/* Which account this tab is, right-aligned before All */
-#hush-splits .hush-account {
-  margin-left: auto;
-  padding: 0 10px;
-  max-width: 260px;
+#hush-header > span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font: 500 12px/1.5 var(--hush-font); /* room for descenders, which overflow: hidden would clip */
-  color: var(--hush-accent);
 }
-#hush-splits .hush-account:empty {
+#hush-header > span:empty {
   display: none;
 }
-#hush-splits .hush-account:not(:empty) + .hush-tab[data-id="all"] {
-  margin-left: 0;
+
+/* Which account this tab is; colored per account by hush.js (HUSH_ACCOUNT_COLORS) */
+#hush-header .hush-account {
+  max-width: 320px;
+  color: var(--hush-accent);
 }
 
-/* While in a split, hide the long generated query in the search box */
-html.hush-in-split form[role="search"] input:not(:focus) {
-  color: transparent !important;
+/* Health warning (hush.js checkHealth): something Hush relies on stopped matching Gmail */
+#hush-header .hush-health {
+  max-width: 420px;
+  margin-left: auto;
+  color: #f5a524;
+  cursor: help;
 }
 
-/* Splits are searches, so Gmail adds its filter chips (Any time / Has attachment / ...),
- * which Simplify floats over the list. Hide them and the space Simplify reserves for them,
- * mirroring Simplify's own hideSearchChips mode. */
-html.hush-in-split .biW,
-html.hush-in-split .G-atb > .G6 {
-  display: none !important;
-}
-html.hush-in-split.simplify.inSearch {
-  --padding-top: 40px !important;
-}
-
-/* Single-sender splits make Gmail show a contact card (.bX), and Simplify pushes the list
- * down 90px for it. Drop both. */
-html.hush-in-split .bGI .bX {
-  display: none !important;
-}
-html.hush-in-split.simplify.inSearch .bGI:has(.bX) .ae4 {
-  padding-top: var(--padding-top) !important;
-}
-
-/* Empty split: no "No messages matched your search" banner, just quiet space */
-html.hush-in-split .TB .TC {
-  display: none !important;
-}
-
-/* Empty split: inbox zero streak, shown in place of Gmail's message */
-#hush-zero {
-  padding: 120px 24px 0;
-  text-align: center;
-  font-family: var(--hush-font);
-  animation: hush-row-in 400ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
-}
-#hush-zero .hush-zero-title {
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--hush-text);
-}
-#hush-zero .hush-zero-line {
-  margin-top: 10px;
-  font-size: 13px;
+#hush-header .hush-streak {
   color: var(--hush-text-3);
-}
-#hush-zero .hush-zero-num {
-  font-size: 15px;
-  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-
-/* Every row in a split is in the inbox; the "Inbox" label chip is noise */
-html.hush-in-split .zA .ar.as:has([title="Inbox"]) {
-  display: none !important;
+#hush-header .hush-health:empty + .hush-streak {
+  margin-left: auto;
 }

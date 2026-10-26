@@ -1,41 +1,34 @@
 # Hush for Gmail
 
-A quiet, Superhuman-style dark theme and split inbox for Gmail, built as a Firefox/Zen extension that
-layers on top of [Simplify Gmail](https://simpl.fyi).
+A quiet, Superhuman-style dark theme and hover shortcuts for Gmail, built as a Firefox/Zen extension
+that layers on top of [Simplify Gmail](https://simpl.fyi).
 
-Built after cancelling Superhuman, to keep its calm look and split inbox without the subscription.
-No Superhuman shortcuts or other features. Just the look, the splits, hover shortcuts, and the
-inbox zero streak.
+Built after cancelling Superhuman, to keep its calm look without the subscription. Just the look,
+hover shortcuts, an account label, and the inbox zero streak, all on Gmail's plain inbox.
 
 ## What it does
 
 - **Dark, minimal theme.** Near-black palette, system font, compact 44px rows, no row borders.
   Sender, subject and date read by brightness and weight. Unread rows keep Simplify's blue dot.
   Checkboxes and unstarred stars only show on hover. Importance markers are hidden and label chips are muted.
-- **Split inbox tabs**: **Inbox · Docs · Calendar · Alerts · All**
-  - **Docs**: Google Drive/Docs/Sheets/Slides shares and comments
-  - **Calendar**: `.ics` invites, Google Calendar notifications, accept/decline replies
-  - **Alerts**: Honeybadger (`honeybadger.io`)
-  - **Inbox**: everything in the inbox that isn't in a split
-  - **All**: Gmail's plain inbox
-  - Each tab has its own underline color. The underline slides between tabs and rows fade in on switch.
-- **Per-tab email counts** next to each tab label.
-- **Newest first on every tab.** Split tabs are re-sorted by date (see below).
-- **Account label.** The tab bar shows the account's email address, so work and personal tabs are easy to tell apart.
+- **Header** above the inbox list:
+  - **Account label**: the account's email address, colored per account, so work and personal Gmail
+    tabs are easy to tell apart.
+  - **Inbox zero streak**: how many weeks in a row you've hit inbox zero. Seeded with the 89-week
+    streak carried over from Superhuman.
+  - **Health warning**: an amber note if something Hush relies on stops matching Gmail (see below).
 - **Hover shortcuts.** Gmail's action keys (`e`, `#`, `s`, `Shift+I`, `l`, …) act on the email under the
   mouse, without ticking its checkbox first. Archived and deleted rows vanish at once.
-- **Inbox zero streak.** An empty split shows how many weeks in a row you've hit inbox zero.
-  Seeded with the 89-week streak carried over from Superhuman.
 
 ## How it works
 
 | File | Role |
 |---|---|
 | `src/manifest.json` | Firefox MV3 manifest. Content script on `mail.google.com`, `update_url` for self-hosted auto-updates |
-| `src/splits.config.js` | **The file you edit**: tabs, their search terms, colors, streak seed |
-| `src/hush.js` | Tab bar, sliding underline, counts, streak |
+| `src/hush.config.js` | **The file you edit**: account label colors, streak seed |
+| `src/hush.js` | Header (account, streak, health check), hover shortcuts |
 | `src/hush.css` | Theme |
-| `src/icon.svg` | Add-on icon: the split tab bar over quiet rows, in the theme's colors |
+| `src/icon.svg` | Add-on icon: colored underlines over quiet rows, in the theme's colors |
 | `build.sh` | Lint and package as `dist/hush.xpi` |
 | `release.sh` | Publish a new version so every installed copy auto-updates |
 | `CHANGELOG.md` | What changed in each version; `release.sh` copies a version's section to its GitHub Release |
@@ -48,30 +41,24 @@ Key design decisions:
   with `!important`, then styles Gmail's long-stable row classes (`.zA` row, `.zE` unread, `.yW` sender,
   `.bog` subject, `.y2` snippet, `.xW` date, `.a4W` subject cell). Hush expects Simplify to be installed
   and Gmail's theme set to **Dark**.
-- **Splits are Gmail searches.** Each tab navigates to `#search/<query>`. A split's terms are OR'ed:
-  `in:inbox {term1 term2}`. "Inbox" is `in:inbox -term1 -term2 …` across all splits. This needs no API,
-  no OAuth, and no data leaves the browser. The tab bar is injected into the visible `div[role="main"]`
-  and re-attached by a `MutationObserver`, because Gmail re-renders views constantly.
-- **Search-page clutter is hidden on split tabs only** (the `html.hush-in-split` class). That covers Gmail's
-  filter chips (`.G6`/`.biW`), the single-sender contact card (`.bX`), the "No messages matched your
-  search" banner (`.TB .TC`), the redundant "Inbox" label chip, and the long query in the search box.
-- **Stale tab URLs self-heal.** Editing `splits.config.js` changes a tab's query, so old URLs from
-  bookmarks or open windows wouldn't match. `staleTab()` recognizes the old shape and redirects to the
-  current query.
-- **Counts are read from the page**, not an API. When a tab is open, Hush records Gmail's "1–N of M"
-  total, or else the visible row count. Counts are cached in `localStorage` per machine. They're only as
-  fresh as your last visit to that tab, and can show `50+` for big tabs. (The Gmail API would give live
-  counts, but needs a Google Cloud OAuth client. We deliberately skipped that.)
-- **Split tabs are re-sorted by date.** Gmail ranks search results its own way, with no sort option,
-  so Hush reorders each page's rows by the date cell's tooltip timestamp, before paint. Unparseable
-  dates (e.g. a non-English UI) leave Gmail's order. Only the current page (up to 50) is sorted, and
-  j/k still walks Gmail's original order.
+- **Plain inbox only.** Hush used to add split tabs (Docs, Calendar, Alerts) built from Gmail searches.
+  They were dropped in 1.1.0: Gmail ranks search results its own way, and counting tabs you aren't
+  looking at would need the Gmail API (a Google Cloud OAuth app, with weekly re-sign-in for personal
+  Gmail) or a hidden Gmail frame, which Gmail refuses when sandboxed and which can disturb the real tab
+  when not. Everything Hush does now works on the inbox Gmail already shows, in Gmail's own order.
+- **The header** is injected into the visible `div[role="main"]` on the inbox list and re-attached by a
+  `MutationObserver`, because Gmail re-renders views constantly.
+- **Account label.** The address comes from the page title ("Inbox (3) - you@example.com - Gmail"), with
+  the account button's label as a fallback. `HUSH_ACCOUNT_COLORS` matches a full address or `@domain`.
+- **Health check.** Hush relies on Gmail's internal class names. If one keeps failing for 8 seconds
+  (Simplify inactive, rows, checkboxes, thread ids, account address), the header shows a warning naming
+  what stopped working. Hover it for the full list.
 - **Hover shortcuts tick, then replay.** Gmail only applies shortcuts to checked rows or its j/k cursor.
   Hush swallows the key, ticks the hovered row, waits for Gmail to mark it selected (`.x7`), then
   replays the key. Removing actions hide the row immediately (`.hush-gone`, remembered by thread id so Gmail's redraws stay hidden) and run one at a time so
   queued rows never share a selection. A manual selection, an open email, or j/k turns this off.
-- **Inbox zero streak.** An ISO week (Mon–Sun) counts once the **Inbox** tab (or All) is genuinely empty.
-  Gmail's empty-state message must be present, so a loading list doesn't count. The current week doesn't
+- **Inbox zero streak.** An ISO week (Mon–Sun) counts once the inbox is genuinely empty. Gmail's (or
+  Simplify's) empty state must be present, so a loading list doesn't count. The current week doesn't
   break the streak until it's over. Weeks are stored as a set in `localStorage` and in
   `browser.storage.sync`, merged by union, so both Macs share one streak via Zen/Firefox Sync.
   `HUSH_STREAK_SEED` in the config adds the pre-Hush streak.
@@ -92,13 +79,14 @@ add-on stays installed once you allow it:
 4. For a shared streak: sign both Zens into the same Mozilla account with **Add-ons** sync enabled.
 
 Recommended Gmail settings: Settings → Inbox → Inbox type **Default** with category tabs unchecked, so
-"All" isn't limited to Primary.
+the inbox (and the streak) covers all mail, not just Primary. Quick settings → Density **Comfortable**
+shows a paperclip instead of attachment chips, keeping every row one line.
 
 ## Updates (automatic)
 
 The manifest's `update_url` points at `updates.json` in this repo. Zen checks it about once a day and
 installs newer versions from GitHub Releases on its own. To check right away: `about:addons` → gear →
-**Check for Updates**. Settings, counts and the streak carry over.
+**Check for Updates**. The streak carries over.
 
 ## Making changes
 
@@ -107,28 +95,24 @@ installs newer versions from GitHub Releases on its own. To check right away: `a
 #   about:debugging → This Zen → Load Temporary Add-on → src/manifest.json
 #   then "Reload" there + refresh Gmail after each edit
 ./build.sh               # lint + package dist/hush.xpi
-./release.sh 1.0.2       # bump version, build, commit, tag, push, GitHub Release
-                         # (add a "## 1.0.2" section to CHANGELOG.md first; it becomes the notes)
+./release.sh 1.1.1       # bump version, build, commit, tag, push, GitHub Release
+                         # (add a "## 1.1.1" section to CHANGELOG.md first; it becomes the notes)
 ```
 
 Requires Node (for `npx web-ext`) and the GitHub CLI (`gh auth login`) for releasing.
 
-Common edits, all in `src/splits.config.js`:
+Common edits, in `src/hush.config.js`:
 
-- **Add a sender to a split**: add a search term, e.g. `"from:sentry.io"` under Alerts
-- **New tab**: add an entry with `id`, `label`, `color`, `terms`
-- **Colors**: each split's `color`, plus `HUSH_INBOX_COLOR` / `HUSH_ALL_COLOR`
-
-Search operators: <https://support.google.com/mail/answer/7190>.
+- **Account colors**: `HUSH_ACCOUNT_COLORS`, e.g. `"@example.com": "#4ea8ff"`
+- **Streak seed**: `HUSH_STREAK_SEED`
 
 ## Known limitations
 
 - Gmail's class names are obfuscated and can change. If something breaks after a Gmail update, it's
   almost always a selector in `hush.css`.
-- Counts for tabs you haven't opened recently are stale.
-- The "Not starred" hover rule and the split-tab date sort expect Gmail's English UI.
-- Emails in splits are still in Gmail's inbox, so Gmail's own unread badge counts them. Don't use a Gmail
-  "Skip the Inbox" filter for split senders, because tabs only show inbox mail.
+- The "Not starred" hover rule expects Gmail's English UI.
+- Hover shortcuts have a short delay for star and mark read/unread, because Gmail registers the
+  selection before applying them.
 
 ## History
 
@@ -147,3 +131,5 @@ Built over one session in October 2026, iterating from screenshots:
 11. Inbox zero streak, seeded at 89 weeks from Superhuman.
 12. Permanent install, synced streak, GitHub auto-updates.
 13. Hover shortcuts and square row highlights.
+14. Account label, newest-first split tabs, health warning; a hidden-Gmail attempt at live tab counts.
+15. Simplified to the plain inbox (1.1.0): split tabs, counts and re-sorting removed.

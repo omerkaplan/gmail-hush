@@ -2,6 +2,17 @@
 
 Each version's section is also its GitHub Release notes (`release.sh` copies it over).
 
+## 1.1.0 (2026-10-26)
+
+Hush is now theme + hover shortcuts on Gmail's plain inbox, without split tabs.
+
+- **Removed:** the split tabs (Inbox · Docs · Calendar · Alerts · All), their counts, and the
+  newest-first re-sorting. Old split bookmarks now open as ordinary Gmail searches.
+- **New header** above the inbox: the account's email address (purple for Sonara Health, green for
+  personal Gmail, set in `HUSH_ACCOUNT_COLORS`), and the inbox zero streak, now counted on the real inbox.
+- **Health warning:** an amber note in the header if something Hush relies on stops matching Gmail.
+- `splits.config.js` is now `hush.config.js`, with just the account colors and streak seed.
+
 ## 1.0.6 (2026-10-26)
 
 - Inbox, Docs, Calendar and Alerts are sorted newest first. They're Gmail searches, which Gmail
