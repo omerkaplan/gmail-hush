@@ -2,6 +2,11 @@
 
 Each version's section is also its GitHub Release notes (`release.sh` copies it over).
 
+## 1.0.5 (2026-10-26)
+
+- The tab bar shows which account you're in (its email address, in the accent color, before
+  All), so work and personal Gmail tabs are easy to tell apart.
+
 ## 1.0.4 (2026-10-23)
 
 - Gmail access is now granted at install. Before, the browser could leave Hush without access to

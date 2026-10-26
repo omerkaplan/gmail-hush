@@ -276,6 +276,24 @@ html.hush-animate .zA:nth-child(n + 8) { animation-delay: 140ms; }
   margin-left: auto;
 }
 
+/* Which account this tab is, right-aligned before All */
+#hush-splits .hush-account {
+  margin-left: auto;
+  padding: 0 10px;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 500 12px/1.5 var(--hush-font); /* room for descenders, which overflow: hidden would clip */
+  color: var(--hush-accent);
+}
+#hush-splits .hush-account:empty {
+  display: none;
+}
+#hush-splits .hush-account:not(:empty) + .hush-tab[data-id="all"] {
+  margin-left: 0;
+}
+
 /* While in a split, hide the long generated query in the search box */
 html.hush-in-split form[role="search"] input:not(:focus) {
   color: transparent !important;

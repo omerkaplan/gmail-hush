@@ -20,6 +20,7 @@ inbox zero streak.
   - **All**: Gmail's plain inbox
   - Each tab has its own underline color. The underline slides between tabs and rows fade in on switch.
 - **Per-tab email counts** next to each tab label.
+- **Account label.** The tab bar shows the account's email address, so work and personal tabs are easy to tell apart.
 - **Hover shortcuts.** Gmail's action keys (`e`, `#`, `s`, `Shift+I`, `l`, …) act on the email under the
   mouse, without ticking its checkbox first. Archived and deleted rows vanish at once.
 - **Inbox zero streak.** An empty split shows how many weeks in a row you've hit inbox zero.

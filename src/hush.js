@@ -50,12 +50,17 @@
     return splits.find((s) => s.terms.some((t) => inner.includes(norm(t)))) || null;
   }
 
-  let bar, indicator;
+  let bar, indicator, accountEl;
   function buildBar() {
     bar = document.createElement("nav");
     bar.id = "hush-splits";
     bar.setAttribute("role", "tablist");
     for (const tab of tabs) {
+      if (tab.id === "all") {
+        accountEl = document.createElement("span");
+        accountEl.className = "hush-account";
+        bar.append(accountEl);
+      }
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "hush-tab";
@@ -296,6 +301,26 @@
     animateTimer = setTimeout(() => root.classList.remove("hush-animate"), 1200);
   }
 
+  // ---------- Account ----------
+  // Which account this tab is, for telling work and personal Gmail tabs apart. Gmail puts the
+  // address in the page title ("Inbox (3) - you@example.com - Gmail"), with the account
+  // button's label ("Google Account: Name (you@example.com)") as a fallback.
+  const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
+  function accountEmail() {
+    return (
+      document.title.match(EMAIL)?.[0] ||
+      document.querySelector('[aria-label^="Google Account"]')?.getAttribute("aria-label").match(EMAIL)?.[0] ||
+      ""
+    );
+  }
+  function renderAccount() {
+    const email = accountEmail();
+    if (!accountEl || accountEl.textContent === email) return;
+    accountEl.textContent = email;
+    accountEl.title = email;
+    schedule(); // the All tab may have moved; re-place the underline
+  }
+
   function visibleMain() {
     for (const el of document.querySelectorAll('div[role="main"]')) {
       if (el.offsetParent !== null) return el;
@@ -318,6 +343,7 @@
     if (lastTabId && view.tab.id !== lastTabId) flagTabChange();
     lastTabId = view.tab.id;
     if (!bar) buildBar();
+    renderAccount();
     let active;
     for (const btn of bar.querySelectorAll(".hush-tab")) {
       const selected = btn.dataset.id === view.tab.id;
