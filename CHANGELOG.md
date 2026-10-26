@@ -2,6 +2,11 @@
 
 Each version's section is also its GitHub Release notes (`release.sh` copies it over).
 
+## 1.1.1 (2026-10-26)
+
+- New inbox zero screen in place of Gmail's "No new mail!" box: a crescent moon over a quiet
+  horizon in the account's color, "Inbox zero", and the streak ("91 weeks in a row").
+
 ## 1.1.0 (2026-10-26)
 
 Hush is now theme + hover shortcuts on Gmail's plain inbox, without split tabs.

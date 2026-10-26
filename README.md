@@ -17,6 +17,8 @@ hover shortcuts, an account label, and the inbox zero streak, all on Gmail's pla
   - **Inbox zero streak**: how many weeks in a row you've hit inbox zero. Seeded with the 89-week
     streak carried over from Superhuman.
   - **Health warning**: an amber note if something Hush relies on stops matching Gmail (see below).
+- **Inbox zero screen.** An empty inbox shows a crescent moon in the account's color and the streak,
+  instead of Gmail's "No new mail!" box.
 - **Hover shortcuts.** Gmail's action keys (`e`, `#`, `s`, `Shift+I`, `l`, …) act on the email under the
   mouse, without ticking its checkbox first. Archived and deleted rows vanish at once.
 
@@ -133,3 +135,4 @@ Built over one session in October 2026, iterating from screenshots:
 13. Hover shortcuts and square row highlights.
 14. Account label, newest-first split tabs, health warning; a hidden-Gmail attempt at live tab counts.
 15. Simplified to the plain inbox (1.1.0): split tabs, counts and re-sorting removed.
+16. Inbox zero screen: moon, horizon and streak (1.1.1).

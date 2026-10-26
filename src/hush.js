@@ -8,7 +8,7 @@
   // elements stay behind. Clear them so there's only ever one header.
   for (const el of document.querySelectorAll("#hush-header, #hush-splits, #hush-zero, #hush-bg")) el.remove();
   for (const el of document.querySelectorAll(".hush-gone")) el.classList.remove("hush-gone");
-  root.classList.remove("hush-in-split", "hush-animate");
+  root.classList.remove("hush-in-split", "hush-animate", "hush-inbox-zero");
 
   const account = location.pathname.match(/\/mail\/u\/\d+/)?.[0] ?? "/mail/u/0";
 
@@ -60,8 +60,10 @@
     if (!inInbox()) return;
     const list = readList();
     if (!list) return;
-    if (list.rows === 0 && list.emptyMsg) recordZero();
+    const empty = list.rows === 0 && list.emptyMsg;
+    if (empty) recordZero();
     renderStreak();
+    renderZero(list.main, empty);
     checkHealth(list);
   }
 
@@ -167,6 +169,75 @@
     streakEl.title = n > 0 ? "Weeks in a row you've reached inbox zero" : "";
   }
 
+  // ---------- Inbox zero screen ----------
+  // Replaces Gmail's "No new mail!" box: a crescent moon over a quiet horizon, in the account's
+  // color, with the streak below. Built element by element (no innerHTML), since Gmail's
+  // Trusted Types policy can refuse HTML strings.
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  function svg(tag, attrs, children = []) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+    el.append(...children);
+    return el;
+  }
+  function zeroArt() {
+    const stop = (offset, opacity) => svg("stop", { offset, "stop-color": "currentColor", "stop-opacity": opacity });
+    const star = (cx, cy, r, opacity) => svg("circle", { cx, cy, r, opacity });
+    const line = (x, y, w, opacity) => svg("rect", { x, y, width: w, height: 1, fill: "url(#hush-zero-h)", opacity });
+    return svg("svg", { viewBox: "0 0 200 120", width: 200, height: 120, "aria-hidden": "true" }, [
+      svg("defs", {}, [
+        svg("linearGradient", { id: "hush-zero-h", x1: 0, x2: 1 }, [stop(0, 0), stop(0.5, 0.55), stop(1, 0)]),
+        svg("radialGradient", { id: "hush-zero-g" }, [stop(0, 0.22), stop(1, 0)]),
+        svg("mask", { id: "hush-zero-m" }, [
+          svg("rect", { width: 200, height: 120, fill: "#fff" }),
+          svg("circle", { cx: 110, cy: 40, r: 17, fill: "#000" }),
+        ]),
+      ]),
+      svg("circle", { cx: 100, cy: 48, r: 44, fill: "url(#hush-zero-g)" }),
+      svg("circle", { cx: 100, cy: 48, r: 18, fill: "currentColor", mask: "url(#hush-zero-m)" }),
+      svg("g", { class: "hush-zero-stars" }, [
+        star(52, 30, 1.2, 0.7), star(146, 22, 1, 0.5), star(160, 54, 1.4, 0.6), star(38, 62, 0.9, 0.4), star(128, 70, 0.8, 0.35),
+      ]),
+      line(10, 88, 180, 1), line(50, 96, 100, 0.5), line(75, 103, 50, 0.3),
+    ]);
+  }
+
+  let zeroEl = null;
+  function renderZero(main, empty) {
+    root.classList.toggle("hush-inbox-zero", empty);
+    if (!empty) {
+      zeroEl?.remove();
+      return;
+    }
+    const { n } = streak();
+    const color = accountColor(accountEmail());
+    const key = `${n}|${color}`;
+    if (zeroEl?.dataset.key === key && zeroEl.isConnected) {
+      if (header?.parentElement === main && zeroEl.previousElementSibling !== header) header.after(zeroEl);
+      return;
+    }
+    zeroEl?.remove();
+    zeroEl = document.createElement("div");
+    zeroEl.id = "hush-zero";
+    zeroEl.dataset.key = key;
+    if (color) zeroEl.style.setProperty("--hush-zero-color", color);
+    const title = document.createElement("div");
+    title.className = "hush-zero-title";
+    title.textContent = "Inbox zero";
+    const line = document.createElement("div");
+    line.className = "hush-zero-line";
+    if (n > 0) {
+      const num = document.createElement("span");
+      num.className = "hush-zero-num";
+      num.textContent = String(n);
+      line.append(num, n === 1 ? " week of inbox zero" : " weeks in a row");
+    } else {
+      line.append("Nothing left. Enjoy the quiet.");
+    }
+    zeroEl.append(zeroArt(), title, line);
+    (header?.parentElement === main ? header : main.firstChild)?.after(zeroEl);
+  }
+
   // ---------- Account ----------
   // Which account this tab is, for telling work and personal Gmail tabs apart. Gmail puts the
   // address in the page title ("Inbox (3) - you@example.com - Gmail"), with the account
@@ -223,6 +294,8 @@
   function sync() {
     if (!inInbox()) {
       header?.remove();
+      zeroEl?.remove();
+      root.classList.remove("hush-inbox-zero");
       return;
     }
     if (!header) buildHeader();
