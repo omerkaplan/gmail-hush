@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Hush for Gmail",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A quiet, Superhuman-style dark theme and hover shortcuts for Gmail. Layers on top of Simplify Gmail.",
   "icons": {
     "48": "icon.svg",
